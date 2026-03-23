@@ -1,5 +1,11 @@
-# 研究报告
+---
+layout: page
+---
 
-这里汇集了所有的深度研究报告。
+<script setup>
+import ReportList from '../.vitepress/theme/components/ReportList.vue'
+</script>
 
-<!-- 后续添加报告时，在这里更新目录 -->
+# 全部报告
+
+<ReportList />
