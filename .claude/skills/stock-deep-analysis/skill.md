@@ -22,6 +22,22 @@ Institutional-grade equity research skill that dispatches parallel agents to ana
 - Technical chart analysis only
 - Comparing multiple stocks (use a different workflow)
 
+## User-Supplied Materials (可选)
+
+If the user provides their own materials (internal reports, expert opinions, industry insights, PDF/PPTX files), these become **anchor inputs for the Deep Dive agent in Phase 3 Track B**:
+
+1. Coordinator reads the user-supplied materials before dispatching any agents
+2. Key insights from the materials are included in the Deep Dive agent prompt as "Expert/insider perspectives to investigate and build upon"
+3. The Deep Dive agent treats these as **hypotheses to validate or challenge with independent evidence** — not as ground truth to blindly echo
+4. If user materials present a different analytical framework (e.g., "think of this company as trust infrastructure, not a payment pipeline"), the Deep Dive agent MUST treat it as an independent analysis hypothesis:
+   - Find independent data that supports or contradicts the framework
+   - Identify the preconditions required for the framework to hold
+   - Quantify the valuation impact if the framework is correct vs incorrect
+   - State under what conditions you would adopt vs reject this framework
+   - **"Mention and move on" is not acceptable** — the framework must be fully engaged with, whether you ultimately agree or disagree
+
+This is optional. Without user materials, the skill runs normally with web search as the sole data source.
+
 ## Agent Teams Architecture
 
 ```
@@ -71,6 +87,7 @@ Research {COMPANY} ({TICKER}) business fundamentals. Cover:
 6. **Technology Disruption**: How AI/tech shifts create opportunities and threats for this business
 7. **Company Response**: Management's stated strategy and roadmap for navigating change
 8. **Value Chain Position**: Key suppliers (bargaining power, concentration), key customers (concentration, switching costs), substitutes and complements that affect competitive dynamics
+9. **Business Model Reframing**: Do NOT just describe the current business model — ask: "If the industry's underlying logic shifts (e.g., from transaction fees to trust commissions, from human-facing to agent-facing, from product to platform), what role could this company play?" Think beyond the consensus narrative. Consider whether the company's assets (users, data, trust, licenses, infrastructure) could be recombined into a fundamentally different value proposition.
 
 Use web search to find recent earnings calls, investor presentations, and analyst coverage.
 Format as structured Markdown with headers. Cite sources with [n] notation.
@@ -399,6 +416,15 @@ All agents use `subagent_type: general-purpose`.
 3. Instruction to use `WebSearch` tool for data gathering
 4. Output format requirement (structured Markdown with citations)
 5. Language preference (Chinese or English, match user's request)
+6. **Company website as primary source**: Before web searching news and analyst reports, agents MUST use `WebFetch` to read the company's official website pages relevant to their dimension. At minimum:
+   - Agent 1 (Business): Homepage, products/services pages, AI/technology pages (e.g., paypal.com/us/business/ai), about page
+   - Agent 2 (Governance): Investor relations page, leadership/board page, proxy materials
+   - Agent 3 (Financial): Investor relations > earnings releases, annual reports, SEC filings
+   - Agent 4 (Segments): Products page, each product/service sub-page
+   - Agent 5 (Risk): Newsroom, regulatory/compliance pages
+   - Agent 6-8: Use company IR page as baseline for all assumptions
+
+   The company's own website is the most authoritative primary source. News articles and analyst reports are secondary. Do NOT produce analysis without first reading the company's own presentation of its business.
 
 ### Phase 2: Devil's Advocate
 
@@ -503,7 +529,13 @@ For each blind spot, conduct deep independent research:
 
 3. **Stress-test with first-principles reasoning.** If the consensus says "X will disrupt Y", ask: What are the 3 preconditions for X to succeed? Are they all met? What's the base rate of similar disruptions succeeding?
 
-4. **Arrive at a falsifiable, non-consensus conclusion.** State it clearly: "The market believes X, but we believe Y, because Z. This will be proven right or wrong when [specific event/metric] occurs by [timeframe]."
+4. **Challenge the analytical framework itself.** The most common blind spot is not wrong data within the right framework, but the wrong framework entirely. Ask: "Is the market analyzing this company through the right lens?" For example:
+   - Is a payment company being analyzed with "pipeline/toll-booth thinking" when it should be analyzed as a "trust infrastructure" play?
+   - Is a SaaS company being valued on subscription metrics when its real value is the data asset?
+   - Is a hardware company being compared to hardware peers when it's actually building a platform?
+   Reframe the business model from scratch if the consensus framework is wrong. The most valuable insight is often not "the numbers are different" but "the entire mental model is wrong."
+
+5. **Arrive at a falsifiable, non-consensus conclusion.** State it clearly: "The market believes X, but we believe Y, because Z. This will be proven right or wrong when [specific event/metric] occurs by [timeframe]."
 
 Output format for each blind spot:
 - **Consensus view**: What the market believes (1 sentence)
@@ -572,6 +604,7 @@ description: {one-line description of what this report covers}
 ### 1.6 技术变革下的机遇与挑战
 ### 1.7 应对策略与路线
 ### 1.8 产业链定位
+### 1.9 商业模式重构推演
 
 ## 二、公司治理
 
