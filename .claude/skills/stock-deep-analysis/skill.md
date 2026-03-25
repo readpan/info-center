@@ -416,15 +416,29 @@ All agents use `subagent_type: general-purpose`.
 3. Instruction to use `WebSearch` tool for data gathering
 4. Output format requirement (structured Markdown with citations)
 5. Language preference (Chinese or English, match user's request)
-6. **Company website as primary source**: Before web searching news and analyst reports, agents MUST use `WebFetch` to read the company's official website pages relevant to their dimension. At minimum:
-   - Agent 1 (Business): Homepage, products/services pages, AI/technology pages (e.g., paypal.com/us/business/ai), about page
-   - Agent 2 (Governance): Investor relations page, leadership/board page, proxy materials
-   - Agent 3 (Financial): Investor relations > earnings releases, annual reports, SEC filings
-   - Agent 4 (Segments): Products page, each product/service sub-page
-   - Agent 5 (Risk): Newsroom, regulatory/compliance pages
-   - Agent 6-8: Use company IR page as baseline for all assumptions
+6. **Company website as primary source — Coordinator 负责 URL 发现，Agent 负责深读**:
 
-   The company's own website is the most authoritative primary source. News articles and analyst reports are secondary. Do NOT produce analysis without first reading the company's own presentation of its business.
+   **Phase 0（Coordinator 在 dispatch 任何 agent 之前执行）**:
+   Coordinator 使用 `WebFetch` 抓取公司官网首页 + `WebSearch` 搜索 `site:{company-domain}` 获取主要页面列表。目标是提取一份 **关键页面 URL 清单**，至少包含：
+   - 首页
+   - 产品/服务页面（每个主要产品线）
+   - AI/技术/开发者页面
+   - 投资者关系页面
+   - 新闻中心/博客
+   - 关于/领导团队页面
+   - 任何公司重点推广的战略页面（如 agentic commerce、developer platform 等）
+
+   如果 WebFetch 首页返回不完整（JS 渲染问题），使用 `WebSearch site:{domain}` 补全。
+
+   **然后将具体 URL 列表写入每个 agent 的 prompt**——不依赖 agent 自己去发现页面。每个 agent 收到的 prompt 中应包含与其维度相关的精确 URL，例如：
+   - Agent 1 (Business): `{company}.com/products`, `{company}.com/business/ai`, `{company}.com/about`, ...
+   - Agent 2 (Governance): `{company}.com/investor-relations`, `{company}.com/leadership`, ...
+   - Agent 3 (Financial): `{company}.com/investor-relations/earnings`, ...
+   - 以此类推
+
+   **Agent 收到 URL 后**：用 `WebFetch` 逐个读取。如果某个 URL 返回空内容，agent 自行用 `WebSearch "{page-topic} site:{domain}"` 做 fallback。
+
+   **The goal is to understand the company the way the company presents itself — before seeing how outsiders describe it.** Missing a key page that the company itself prominently features is an unacceptable gap.
 
 ### Phase 2: Devil's Advocate
 
@@ -458,6 +472,7 @@ Your task — be harsh, be specific, be constructive:
 12. **SOTP Consistency**: Do segment multiples make sense vs pure-play peers? Is there double-counting?
 13. **Management Credibility**: Does the analysis take management claims at face value without verifying against actual historical delivery? Compare stated guidance vs results where possible.
 14. **Survivorship Bias in Comps**: Are failed, acquired, or delisted competitors excluded from the peer set? This inflates peer median performance and makes the target look relatively worse or better than reality.
+15. **Company Self-Presentation Gap**: Compare what the company prominently features on its own website (product pages, strategy pages, AI/technology pages, developer platforms) with what the research covers. If the company is prominently pushing a capability, product, or strategic narrative on its website that the research ignores or barely mentions, that is a gap — the company's own prioritization signals what it believes is most important, and the analysis must engage with it (whether to validate or challenge). List specific pages/products that were under-analyzed.
 
 For EACH issue found, output:
 - **Section**: Which section has the problem
@@ -562,7 +577,10 @@ Coordinator assembles the final report:
    - Name the single most important variable that determines whether the thesis is right or wrong
    - Provide a specific "watch for" trigger and timeframe
 5. Data consistency check across all chapters
-6. Output to `docs/reports/finance/{company}/{YYYY-MM-DD}.md`
+6. **最终报告必须自包含**: 所有 Phase 1-3 agent 的研究内容必须整合进最终报告。最终报告不得链接或引用中间文件作为"附件"或"详细分部报告"。读者只需打开一个文件就能获得完整分析。Phase 1-3 的中间产出是工作草稿，不是交付物。
+  7. Output to `docs/reports/finance/{company}/{YYYY-MM-DD}.md`
+  8. **防覆盖检查**：写入前用 Glob 检查目标路径是否已有文件。如果 `{YYYY-MM-DD}.md` 已存在则写入 `{YYYY-MM-DD}-2.md`，以此类推，绝不覆盖已有报告。
+  9. **清理中间文件（必须执行）**：最终报告写入成功后，立即用 Bash 删除本次分析产生的所有中间文件。中间文件特征：同目录下、同日期、文件名含 agent 维度关键词（如 business-fundamentals, governance, scenario, comps, revisions, contrarian, risk-factors, segment, tam, capital, valuation, devils-advocate 等）。不删除最终报告本身，不删除日期不同的旧报告。**这一步是硬性要求，跳过则本次分析视为未完成。**
 
 ## Output Format
 
